@@ -18,7 +18,7 @@ jobs:
       with:
         python-version: '3.x'
 
-     - name: Configure CMake (Pre-RE & Client-Datum)
+    - name: Configure CMake (Pre-RE & Client-Datum)
       run: |
         mkdir build
         cd build
