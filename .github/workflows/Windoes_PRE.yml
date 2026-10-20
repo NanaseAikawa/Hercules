@@ -18,11 +18,11 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Configure CMake
+    - name: Configure CMake (Pre-RE & Client-Datum)
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64 -DPRERE=ON
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DPRERE=ON -DPACKETVER=20190605
 
     - name: Build Server Binaries
       run: |
