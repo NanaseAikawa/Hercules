@@ -22,7 +22,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605
+        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605 -DCMAKE_BUILD_TYPE=Release
 
     - name: Build Server Binaries
       run: |
