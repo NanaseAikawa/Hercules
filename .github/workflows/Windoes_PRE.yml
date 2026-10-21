@@ -26,15 +26,16 @@ jobs:
         run: |
           .\tools\ci\windows.ps1 build -DENABLE_RENEWAL=OFF -DPACKETVER=20190605
 
-      # Wir suchen jetzt überall nach den Exen, damit der Upload nicht fehlschlägt!
+      # Dieser Schritt sucht den gesamten Arbeitsbereich nach den Exen ab und zeigt uns, wo sie liegen!
+      - name: Locate Executables
+        run: |
+          Get-ChildItem -Path . -Filter *.exe -Recurse | Select-Object FullName
+
+      # Wir nutzen jetzt eine Wildcard-Suche, um die Exen aus JEDEM Ordner hochzuladen!
       - name: Upload Compiled Executables
         uses: actions/upload-artifact@v4
         with:
           name: Hercules-Server-Binaries
           path: |
-            login-server.exe
-            char-server.exe
-            map-server.exe
-            build/bin/Release/login-server.exe
-            build/bin/Release/char-server.exe
-            build/bin/Release/map-server.exe
+            **/*.exe
+            !**/3rdparty/**/*.exe
