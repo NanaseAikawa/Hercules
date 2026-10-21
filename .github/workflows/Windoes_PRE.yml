@@ -36,7 +36,7 @@ jobs:
     - name: Configure CMake (Pre-RE, Client-Datum & cJSON)
       run: |
         cd build
-        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"
+        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="generators/conan_toolchain.cmake"
 
     - name: Build Server Binaries
       run: |
