@@ -6,57 +6,34 @@ on:
   workflow_dispatch: 
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 30
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
+      # Wir nutzen das originale Restore-System von Hercules für Conan
+      - uses: actions/cache/restore@v4
+        name: restore conan cache
+        id: cache
+        with:
+          path: ~/.conan2
+          key: ${{ runner.os }}-msvc-${{ hashFiles('conanfile.py') }}
 
-    - name: Cache Conan Packages
-      id: cache-conan
-      uses: actions/cache@v4
-      with:
-        path: ~/.conan2/p
-        key: windows-conan-${{ hashFiles('**/conanfile.txt', '**/conanfile.py') }}
-        restore-keys: |
-          windows-conan-
+      # Der originale Build-Befehl von Hercules, punktgenau auf deine Wünsche eingestellt!
+      - name: build
+        run: |
+          .\tools\ci\windows.ps1 build -DENABLE_RENEWAL=OFF -DPACKETVER=20190605
 
-    - name: Install Conan & CMake
-      run: |
-        pip install conan
-        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --force
-
-    - name: Configure Conan
-      run: |
-        conan profile detect --force
-
-    - name: Install Dependencies via Conan
-      run: |
-        mkdir build
-        cd build
-        conan install .. --output-folder=. --build=missing -s build_type=Release
-
-    - name: Configure CMake via Conan Preset
-      run: |
-        cd build
-        cmake .. --preset conan-release -DPRERE=ON -DPACKETVER=20190605
-
-    - name: Build Server Binaries
-      run: |
-        cd build
-        cmake --build --preset conan-release
-
-    - name: Upload Compiled Executables
-      uses: actions/upload-artifact@v4
-      with:
-        name: Hercules-Server-Binaries
-        path: |
-          build/bin/Release/login-server.exe
-          build/bin/Release/char-server.exe
-          build/bin/Release/map-server.exe
+      # Die fertigen Exen abholen und als Zip bereitstellen
+      - name: Upload Compiled Executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hercules-Server-Binaries
+          path: |
+            login-server.exe
+            char-server.exe
+            map-server.exe
