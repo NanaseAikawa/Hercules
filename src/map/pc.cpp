@@ -8143,16 +8143,19 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		next = pc->thisbaseexp(sd);
 
 	if (get_percentage64(sd->status.base_exp, next) >= 99) {
-		// Berechne den verbleibenden Overkill-Schaden laut fRO 2008
-		int overkill_damage = damage - sd->status.hp;
+		// Aegis-Overkill-Fix ohne unsichere Schadensvariable:
+		// Wenn die HP unter 0 fallen, ist der absolute Wert deiner negativen HP genau der Overkill-Schaden!
+		// Beispiel: Du hattest 100 HP, kriegst 500 Schaden -> HP stehen intern kurz auf -400.
+		int overkill_damage = 0;
+		if (sd->status.hp < 0) {
+			overkill_damage = -sd->status.hp;
+		}
 
-		// Das Flag sperrt den Engel bis zum nächsten Level-Up
+		// Das Flag und die Wunderheilung ausführen
 		sd->state.snovice_dead_flag = 1;
-		
-		// Wunderheilung füllt HP/SP temporär auf Max
 		status_percent_heal(&sd->bl, 100, 100);
 
-		// Die Aegis-Engine zieht den Restschaden des tödlichen Schlags ab
+		// Jetzt ziehen wir den realen Overkill-Schaden von den frisch geheilten Max-HP ab!
 		sd->status.hp -= overkill_damage;
 
 		// War der Restschaden höher als die maximalen HP der SN?
@@ -8166,7 +8169,7 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
-		// KEINE künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
+		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
 		// Starte Steel Body Level 5 mit exakt 666ms Verzögerung (20 Frames @ 30 FPS aus dem Fraps-Video)
 		sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 666, MO_STEELBODY);
@@ -8177,7 +8180,6 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		return 0; // Tödlicher Schlag abgewendet, SN lebt noch knapp!
 	}
 }
-
 
 	if (battle_config.death_penalty_type != 0 && pc->isDeathPenaltyJob(sd->job) && !map_flag_gvg2(sd->bl.m)
 	    && map->list[sd->bl.m].flag.noexppenalty == 0 && sd->sc.data[SC_BABY] == NULL
