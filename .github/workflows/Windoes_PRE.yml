@@ -26,16 +26,12 @@ jobs:
         run: |
           .\tools\ci\windows.ps1 build -DENABLE_RENEWAL=OFF -DPACKETVER=20190605
 
-      # Dieser Schritt sucht den gesamten Arbeitsbereich nach den Exen ab und zeigt uns, wo sie liegen!
-      - name: Locate Executables
-        run: |
-          Get-ChildItem -Path . -Filter *.exe -Recurse | Select-Object FullName
-
-      # Wir nutzen jetzt eine Wildcard-Suche, um die Exen aus JEDEM Ordner hochzuladen!
+      # Jetzt holen wir die Exen punktgenau aus dem echten bin-Verzeichnis ab!
       - name: Upload Compiled Executables
         uses: actions/upload-artifact@v4
         with:
           name: Hercules-Server-Binaries
           path: |
-            **/*.exe
-            !**/3rdparty/**/*.exe
+            bin/login-server.exe
+            bin/char-server.exe
+            bin/map-server.exe
