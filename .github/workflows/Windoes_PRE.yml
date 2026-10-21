@@ -18,6 +18,7 @@ jobs:
       with:
         python-version: '3.x'
 
+    # Hier aktivieren wir den Turbo-Cache für Conan-Abhängigkeiten!
     - name: Cache Conan Packages
       id: cache-conan
       uses: actions/cache@v4
@@ -27,6 +28,7 @@ jobs:
         restore-keys: |
           ${{ runs-on }}-conan-
 
+    # Dieser Schritt wird dank des Caches beim nächsten Mal extrem beschleunigt!
     - name: Install Conan & CMake
       run: |
         pip install conan
@@ -45,7 +47,7 @@ jobs:
     - name: Configure CMake (Pre-RE, Client-Datum & cJSON)
       run: |
         cd build
-        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/build/generators/conan_toolchain.cmake"
+        cmake .. -A x64 -DPRERE=ON -DPACKETVER=20190605 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="generators/conan_toolchain.cmake"
 
     - name: Build Server Binaries
       run: |
