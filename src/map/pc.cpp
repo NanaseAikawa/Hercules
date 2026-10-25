@@ -8171,8 +8171,15 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
-		// Starte Steel Body Level 5 mit exakt 666ms Verzögerung (20 Frames @ 30 FPS aus dem Fraps-Video)
-		sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 666, MO_STEELBODY);
+		// Moderner C++ Lambda-Timer für Hercules:
+		// Führt nach exakt 666ms den Steel Body (150 Sek Laufzeit) aus.
+		timer->add(timer->gettick() + 666, [](int tid, int64 tick, int id, intptr_t data) -> int {
+			struct map_session_data *sd_timer = map->id2sd(id);
+			if (sd_timer != nullptr) {
+				sc_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 150000);
+			}
+			return 0;
+		}, sd->bl.id, 0);
 
 		if (map_flag_gvg2(sd->bl.m))
 			pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
