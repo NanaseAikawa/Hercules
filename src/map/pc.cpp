@@ -8172,11 +8172,11 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
 		// Moderner C++ Lambda-Timer für Hercules:
-		// Nutzt status->change_start anstelle des sc_start-Makros, um Präprozessor-Fehler zu vermeiden.
+		// Nutzt status->change_start mit '0' als Option-Flag am Ende für universelle Kompatibilität.
 		timer->add(timer->gettick() + 666, [](int /*tid*/, int64 /*tick*/, int id, intptr_t /*data*/) -> int {
 			struct map_session_data *sd_timer = map->id2sd(id);
 			if (sd_timer != nullptr) {
-				status->change_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 0, 0, 0, 150000, SCSTART_NONE);
+				status->change_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 0, 0, 0, 150000, 0);
 			}
 			return 0;
 		}, sd->bl.id, 0);
