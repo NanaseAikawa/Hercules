@@ -8135,85 +8135,30 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 		map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 	}
 
-// ==========================================
-// HIER STARTET DIE NEUE HILFSFUNKTION FÜR DEN TIMER
-// ==========================================
-static int pc_supernovice_steelbody_timer(int tid, int64 tick, int id, intptr_t data)
-{
-	struct map_session_data *sd = map->id2sd(id);
-	if (sd == nullptr)
-		return 0;
+	// Activate Steel Body if a Super Novice dies at 99+% EXP. [celest]
+	if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_flag == 0) {
+		uint64 next = pc->nextbaseexp(sd);
 
-	sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
-	return 0;
-}	
-	
-// Statische Struktur vorab definieren, damit das originale sc_start fehlerfrei expandieren kann
-struct SteelBodyTrigger {
-	static int exec(int tid, int64 tick, int id, intptr_t data) {
-		struct map_session_data *sd_timer = map->id2sd(id);
-		if (sd_timer != nullptr) {
-			// Nutzt exakt das originale Hercules-Makro für maximale Stabilität!
-			sc_start(NULL, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
-		}
-		return 0;
-	}
-};
+		if (next == 0)
+			next = pc->thisbaseexp(sd);
 
-// Activate Steel Body if a Super Novice dies at 99+% EXP. [celest] [Aegis-Overkill-Fix]
-if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_flag == 0) {
-	uint64 next = pc->nextbaseexp(sd);
+		if (get_percentage64(sd->status.base_exp, next) >= 99) {
+			sd->state.snovice_dead_flag = 1;
+			pc->setstand(sd);
+			status_percent_heal(&sd->bl, 100, 100);
+			clif->resurrection(&sd->bl, 1);
 
-	if (next == 0)
-		next = pc->thisbaseexp(sd);
+			if (battle_config.pc_invincible_time != 0)
+				pc->setinvincibletimer(sd, battle_config.pc_invincible_time);
 
-	if (get_percentage64(sd->status.base_exp, next) >= 99) {
-		// Aegis-Overkill-Fix ohne unsichere Schadensvariable:
-		int overkill_damage = 0;
-		if (sd->status.hp < 0) {
-			overkill_damage = -sd->status.hp;
-		}
+			sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
 
-		// Das Flag und die Wunderheilung ausführen
-		sd->state.snovice_dead_flag = 1;
-		status_percent_heal(&sd->bl, 100, 100);
+			if (map_flag_gvg2(sd->bl.m))
+				pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
 
-		// Jetzt ziehen wir den realen Overkill-Schaden von den frisch geheilten Max-HP ab!
-		sd->status.hp -= overkill_damage;
-
-		// War der Restschaden höher als die maximalen HP der SN?
-		if (sd->status.hp <= 0) {
-			// Der Overkill war zu brutal: Die SN stirbt trotz Engel sofort.
-			sd->status.hp = 0;
-			return 1; 
-		}
-
-		// Wenn die SN den Overkill überlebt, steht sie jetzt mit Rest-HP da:
-		pc->setstand(sd);
-		clif->resurrection(&sd->bl, 1);
-
-		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
-		
-		// Wir holen die Skill-Werte vorab in lokale Variablen, damit das Makro im Lambda nicht stört
-		sc_type sb_sc_type = skill->get_sc_type(MO_STEELBODY);
-		int sb_duration = skill->get_time(MO_STEELBODY, 5);
-
-		// Starte den modernen C++ Lambda-Timer nach exakt 666ms
-		timer->add(timer->gettick() + 666, [sb_sc_type, sb_duration](int tid, int64 tick, int id, intptr_t data) -> int {
-			struct map_session_data *sd_timer = map->id2sd(id);
-			if (sd_timer != nullptr) {
-				// Nutzt direkt das offizielle Makro mit den vorbereiteten Werten
-				sc_start(NULL, &sd_timer->bl, sb_sc_type, 100, 5, sb_duration, MO_STEELBODY);
-			}
 			return 0;
-		}, sd->bl.id, 0);
-
-		if (map_flag_gvg2(sd->bl.m))
-			pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
-
-		return 0; // Tödlicher Schlag abgewendet, SN lebt noch knapp!
+		}
 	}
-}
 
 	if (battle_config.death_penalty_type != 0 && pc->isDeathPenaltyJob(sd->job) && !map_flag_gvg2(sd->bl.m)
 	    && map->list[sd->bl.m].flag.noexppenalty == 0 && sd->sc.data[SC_BABY] == NULL
