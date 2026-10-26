@@ -8171,19 +8171,20 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
-		// Moderner C++ Lambda-Timer für Hercules:
-		// Wir nutzen status->change_init, um alle Blockaden und Skill-Zuweisungen zu umgehen.
-		timer->add(timer->gettick() + 666, [](int /*tid*/, int64 /*tick*/, int id, intptr_t /*data*/) -> int {
-			struct map_session_data *sd_timer = map->id2sd(id);
-			if (sd_timer != nullptr) {
-				// Holt die SC-ID (z. B. SC_STEELBODY). Falls get_sc_type fehlschlägt, nutzen wir das direkte Enum, falls verfügbar.
-				sc_type type = skill->get_sc_type(MO_STEELBODY);
-				
-				// change_init erzwingt den Status direkt auf der bl, ohne "Caster"-Prüfungen
-				status->change_init(&sd_timer->bl, type, 5, 150000, 0, 0, 0);
+		// Statische Struktur um das sc_start Makro vor dem Lambda-Compiler zu kapseln
+		struct SteelBodyTrigger {
+			static int exec(int /*tid*/, int64 /*tick*/, int id, intptr_t /*data*/) {
+				struct map_session_data *sd_timer = map->id2sd(id);
+				if (sd_timer != nullptr) {
+					// Hier greift das Makro nun fehlerfrei, da es in einer echten Funktion sitzt!
+					sc_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 150000);
+				}
+				return 0;
 			}
-			return 0;
-		}, sd->bl.id, 0);
+		};
+
+		// Starte den Timer mit der gekapselten Methode
+		timer->add(timer->gettick() + 666, SteelBodyTrigger::exec, sd->bl.id, 0);
 
 		if (map_flag_gvg2(sd->bl.m))
 			pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
@@ -8191,6 +8192,7 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		return 0; // Tödlicher Schlag abgewendet, SN lebt noch knapp!
 	}
 }
+
 
 	if (battle_config.death_penalty_type != 0 && pc->isDeathPenaltyJob(sd->job) && !map_flag_gvg2(sd->bl.m)
 	    && map->list[sd->bl.m].flag.noexppenalty == 0 && sd->sc.data[SC_BABY] == NULL
