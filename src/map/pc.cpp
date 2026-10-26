@@ -8194,8 +8194,19 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
-		// Starte den stabilen Timer für den originalen sc_start-Aufruf nach exakt 666ms
-		timer->add(timer->gettick() + 666, SteelBodyTrigger::exec, sd->bl.id, 0);
+		// Wir holen die Skill-Werte vorab in lokale Variablen, damit das Makro im Lambda nicht stört
+		sc_type sb_sc_type = skill->get_sc_type(MO_STEELBODY);
+		int sb_duration = skill->get_time(MO_STEELBODY, 5);
+
+		// Starte den modernen C++ Lambda-Timer nach exakt 666ms
+		timer->add(timer->gettick() + 666, [sb_sc_type, sb_duration](int tid, int64 tick, int id, intptr_t data) -> int {
+			struct map_session_data *sd_timer = map->id2sd(id);
+			if (sd_timer != nullptr) {
+				// Nutzt direkt das offizielle Makro mit den vorbereiteten Werten
+				sc_start(NULL, &sd_timer->bl, sb_sc_type, 100, 5, sb_duration, MO_STEELBODY);
+			}
+			return 0;
+		}, sd->bl.id, 0);
 
 		if (map_flag_gvg2(sd->bl.m))
 			pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
