@@ -8135,6 +8135,31 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 		map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 	}
 
+// ==========================================
+// HIER STARTET DIE NEUE HILFSFUNKTION FÜR DEN TIMER
+// ==========================================
+static int pc_supernovice_steelbody_timer(int tid, int64 tick, int id, intptr_t data)
+{
+	struct map_session_data *sd = map->id2sd(id);
+	if (sd == nullptr)
+		return 0;
+
+	sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
+	return 0;
+}	
+	
+// Statische Struktur vorab definieren, damit das originale sc_start fehlerfrei expandieren kann
+struct SteelBodyTrigger {
+	static int exec(int tid, int64 tick, int id, intptr_t data) {
+		struct map_session_data *sd_timer = map->id2sd(id);
+		if (sd_timer != nullptr) {
+			// Nutzt exakt das originale Hercules-Makro für maximale Stabilität!
+			sc_start(NULL, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
+		}
+		return 0;
+	}
+};
+
 // Activate Steel Body if a Super Novice dies at 99+% EXP. [celest] [Aegis-Overkill-Fix]
 if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_flag == 0) {
 	uint64 next = pc->nextbaseexp(sd);
@@ -8144,8 +8169,6 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 
 	if (get_percentage64(sd->status.base_exp, next) >= 99) {
 		// Aegis-Overkill-Fix ohne unsichere Schadensvariable:
-		// Wenn die HP unter 0 fallen, ist der absolute Wert deiner negativen HP genau der Overkill-Schaden!
-		// Beispiel: Du hattest 100 HP, kriegst 500 Schaden -> HP stehen intern kurz auf -400.
 		int overkill_damage = 0;
 		if (sd->status.hp < 0) {
 			overkill_damage = -sd->status.hp;
@@ -8171,19 +8194,7 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
-		// Statische Struktur, um die exakte status->change_start-Funktion aufzurufen
-		struct SteelBodyTrigger {
-			static int exec(int /*tid*/, int64 /*tick*/, int id, intptr_t /*data*/) {
-				struct map_session_data *sd_timer = map->id2sd(id);
-				if (sd_timer != nullptr) {
-					// Nutzt direkt das Interface mit exakt 11 Parametern, um das Makro komplett zu umgehen
-					status->change_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 0, 0, 0, 0, 150000, 0);
-				}
-				return 0;
-			}
-		};
-
-		// Starte den Timer mit der sauberen C++ Methode
+		// Starte den stabilen Timer für den originalen sc_start-Aufruf nach exakt 666ms
 		timer->add(timer->gettick() + 666, SteelBodyTrigger::exec, sd->bl.id, 0);
 
 		if (map_flag_gvg2(sd->bl.m))
@@ -8192,8 +8203,6 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		return 0; // Tödlicher Schlag abgewendet, SN lebt noch knapp!
 	}
 }
-
-
 
 	if (battle_config.death_penalty_type != 0 && pc->isDeathPenaltyJob(sd->job) && !map_flag_gvg2(sd->bl.m)
 	    && map->list[sd->bl.m].flag.noexppenalty == 0 && sd->sc.data[SC_BABY] == NULL
