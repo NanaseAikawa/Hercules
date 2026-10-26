@@ -8135,30 +8135,49 @@ static int pc_dead(struct map_session_data *sd, struct block_list *src)
 		map->addflooritem(&sd->bl, &item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y, 0, 0, 0, 0, false);
 	}
 
-	// Activate Steel Body if a Super Novice dies at 99+% EXP. [celest]
-	if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_flag == 0) {
-		uint64 next = pc->nextbaseexp(sd);
+// Activate Steel Body if a Super Novice dies at 99+% EXP. [celest] [Aegis-Overkill-Fix - OHNE DELAY]
+if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_flag == 0) {
+	uint64 next = pc->nextbaseexp(sd);
 
-		if (next == 0)
-			next = pc->thisbaseexp(sd);
+	if (next == 0)
+		next = pc->thisbaseexp(sd);
 
-		if (get_percentage64(sd->status.base_exp, next) >= 99) {
-			sd->state.snovice_dead_flag = 1;
-			pc->setstand(sd);
-			status_percent_heal(&sd->bl, 100, 100);
-			clif->resurrection(&sd->bl, 1);
-
-			if (battle_config.pc_invincible_time != 0)
-				pc->setinvincibletimer(sd, battle_config.pc_invincible_time);
-
-			sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
-
-			if (map_flag_gvg2(sd->bl.m))
-				pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
-
-			return 0;
+	if (get_percentage64(sd->status.base_exp, next) >= 99) {
+		// Aegis-Overkill-Fix ohne unsichere Schadensvariable:
+		int overkill_damage = 0;
+		if (sd->status.hp < 0) {
+			overkill_damage = -sd->status.hp;
 		}
+
+		// Das Flag und die Wunderheilung ausführen
+		sd->state.snovice_dead_flag = 1;
+		status_percent_heal(&sd->bl, 100, 100);
+
+		// Jetzt ziehen wir den realen Overkill-Schaden von den frisch geheilten Max-HP ab!
+		sd->status.hp -= overkill_damage;
+
+		// War der Restschaden höher als die maximalen HP der SN?
+		if (sd->status.hp <= 0) {
+			// Der Overkill war zu brutal: Die SN stirbt trotz Engel sofort.
+			sd->status.hp = 0;
+			return 1; 
+		}
+
+		// Wenn die SN den Overkill überlebt, steht sie jetzt mit Rest-HP da:
+		pc->setstand(sd);
+		clif->resurrection(&sd->bl, 1);
+
+		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
+
+		// Steel Body wird sofort und ohne jede Verzögerung direkt gezündet
+		sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
+
+		if (map_flag_gvg2(sd->bl.m))
+			pc->respawn_timer(INVALID_TIMER, timer->gettick(), sd->bl.id, 0);
+
+		return 0; // Tödlicher Schlag abgewendet, SN lebt noch knapp und hat direkt Steel Body!
 	}
+}
 
 	if (battle_config.death_penalty_type != 0 && pc->isDeathPenaltyJob(sd->job) && !map_flag_gvg2(sd->bl.m)
 	    && map->list[sd->bl.m].flag.noexppenalty == 0 && sd->sc.data[SC_BABY] == NULL
