@@ -8165,18 +8165,22 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 			return 1; 
 		}
 
-				// Wenn die SN den Overkill überlebt, steht sie jetzt mit Rest-HP da:
+		// Wenn die SN den Overkill überlebt, steht sie jetzt mit Rest-HP da:
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
 		// Keine künstliche Unverwundbarkeit, damit die Monster-Agro sofort weiterläuft!
 		
 		// Moderner C++ Lambda-Timer für Hercules:
-		// Exakt 11 Argumente für status->change_start, um der Core-Signatur zu entsprechen.
+		// Wir nutzen status->change_init, um alle Blockaden und Skill-Zuweisungen zu umgehen.
 		timer->add(timer->gettick() + 666, [](int /*tid*/, int64 /*tick*/, int id, intptr_t /*data*/) -> int {
 			struct map_session_data *sd_timer = map->id2sd(id);
 			if (sd_timer != nullptr) {
-				status->change_start(&sd_timer->bl, &sd_timer->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, 0, 0, 0, 0, 150000, 0);
+				// Holt die SC-ID (z. B. SC_STEELBODY). Falls get_sc_type fehlschlägt, nutzen wir das direkte Enum, falls verfügbar.
+				sc_type type = skill->get_sc_type(MO_STEELBODY);
+				
+				// change_init erzwingt den Status direkt auf der bl, ohne "Caster"-Prüfungen
+				status->change_init(&sd_timer->bl, type, 5, 150000, 0, 0, 0);
 			}
 			return 0;
 		}, sd->bl.id, 0);
