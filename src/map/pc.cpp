@@ -8167,11 +8167,13 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
-		// KORREKTUR: Da die SN den Overkill überlebt hat, ziehen wir den fälschlicherweise erhöhten Tod wieder ab
-		if (sd->status.death > 0) {
-			sd->status.death--;
-			clif->updatestatus(sd, SP_DEATH); // Aktualisiert die Anzeige im Client (Alt+A) sofort
+		// KORREKTUR: Variablennamen und Enum auf Hercules-Standard angepasst
+		if (sd->status.death_count > 0) {
+			sd->status.death_count--;
+			clif->updatestatus(sd, SP_DEATH_COUNT); // Aktualisiert die Anzeige im Client (Alt+A) sofort
 		}
+
+		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
 
 		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
 
