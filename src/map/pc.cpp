@@ -8167,18 +8167,14 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
-		// KORREKTUR: Nutzt das exakte Hercules-Enum SP_CHARINFO für das Status-Update
+		// KORREKTUR: Nur die Werte berechnen, kein riskantes manuelles Paket-Senden
 		if (sd->die_counter > 0) {
 			sd->die_counter--;
 			pc_setglobalreg(sd, script->add_variable("PC_DIE_COUNTER"), sd->die_counter);
-			
-			// Statuswerte neu berechnen und das Update-Paket an den Client senden
-			status_calc_pc(sd, SCO_NONE);
-			clif->updatestatus(sd, SP_CHARINFO);
+			status_calc_pc(sd, SCO_NONE); // Berechnet die +10 Stats serverseitig sofort neu
 		}
 
 		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
-
 
 		// Steel Body wird sofort und ohne jede Verzögerung direkt gezündet
 		sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
