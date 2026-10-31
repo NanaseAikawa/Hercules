@@ -8167,14 +8167,14 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
-		// KORREKTUR: Auslesen, Dekrementieren und Zurückschreiben der Script-Registry-Variable
-		int current_deaths = pc_readglobalreg(sd, add_str("PC_DIE_COUNTER"));
-		if (current_deaths > 0) {
-			pc_setglobalreg(sd, add_str("PC_DIE_COUNTER"), current_deaths - 1);
+		// KORREKTUR: Nutzt die echten Hercules-Variablen aus der SL-Logik
+		if (sd->die_counter > 0) {
+			sd->die_counter--;
+			pc_setglobalreg(sd, script->add_variable("PC_DIE_COUNTER"), sd->die_counter);
 			
-			// Status-Update triggern, damit der Server die +10 Stats sofort neu berechnet
+			// Statuswerte neu berechnen, damit die +10 Stats sofort anspringen
 			status_calc_pc(sd, SCO_NONE);
-			clif->updatestatus(sd, SP_STATUS); 
+			clif->updatestatus(sd, SP_STATUS);
 		}
 
 		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
