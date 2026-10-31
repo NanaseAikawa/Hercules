@@ -8167,15 +8167,18 @@ if ((sd->job & MAPID_UPPERMASK) == MAPID_SUPER_NOVICE && sd->state.snovice_dead_
 		pc->setstand(sd);
 		clif->resurrection(&sd->bl, 1);
 
-		// KORREKTUR: Variablennamen und Enum auf Hercules-Standard angepasst
-		if (sd->status.death_count > 0) {
-			sd->status.death_count--;
-			clif->updatestatus(sd, SP_DEATH_COUNT); // Aktualisiert die Anzeige im Client (Alt+A) sofort
+		// KORREKTUR: Auslesen, Dekrementieren und Zurückschreiben der Script-Registry-Variable
+		int current_deaths = pc_readglobalreg(sd, add_str("PC_DIE_COUNTER"));
+		if (current_deaths > 0) {
+			pc_setglobalreg(sd, add_str("PC_DIE_COUNTER"), current_deaths - 1);
+			
+			// Status-Update triggern, damit der Server die +10 Stats sofort neu berechnet
+			status_calc_pc(sd, SCO_NONE);
+			clif->updatestatus(sd, SP_STATUS); 
 		}
 
 		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
 
-		// HIER GELÖSCHT: Keine künstliche Unverwundbarkeit (setinvincibletimer), damit Monster sofort weiterschlagen!
 
 		// Steel Body wird sofort und ohne jede Verzögerung direkt gezündet
 		sc_start(NULL, &sd->bl, skill->get_sc_type(MO_STEELBODY), 100, 5, skill->get_time(MO_STEELBODY, 5), MO_STEELBODY);
